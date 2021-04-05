@@ -59,14 +59,14 @@ int main(void) {
       printf("clGetPlatformInfo failed to get info for platform %d!\n", i);
       exit(1);
     }
-    printf("Platform name: %s\n", buf);
+    printf("%d Platform name: %s\n", i, buf);
   }
 
   //Get the devices list and choose the device you want to run on
   cl_device_id* device_list = NULL;
   cl_uint num_devices;
 
-  cl_status = clGetDeviceIDs( platforms[0], CL_DEVICE_TYPE_GPU, 0,NULL, &num_devices);
+  cl_status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 0,NULL, &num_devices);
   device_list = (cl_device_id *) malloc(sizeof(cl_device_id)*num_devices);
   cl_status = clGetDeviceIDs( platforms[0],CL_DEVICE_TYPE_GPU, num_devices, device_list, NULL);
 
