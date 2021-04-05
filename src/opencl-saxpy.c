@@ -51,6 +51,7 @@ int main(void) {
     printf("clGetPlatformIDs failed to get info about the platforms!\n");
     exit(1);
   }
+
   for (int i = 0; i < num_platforms; i++) {
     char buf[1024];
     size_t actual_size;
@@ -61,13 +62,19 @@ int main(void) {
     }
     printf("%d Platform name: %s\n", i, buf);
   }
+  printf("Using platform 0\n");
 
-  //Get the devices list and choose the device you want to run on
-  cl_device_id* device_list = NULL;
   cl_uint num_devices;
+  // Query the number of devices that platform 0 has of type CL_DEVICE_TYPE_GPU 
+  cl_status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 0, NULL, &num_devices);
+  if (cl_status != CL_SUCCESS) {
+    printf("clGetDeviceIDs failed to get info for device\n");
+    exit(1);
+  }
+  printf("Number of devices: %d\n", num_devices);
 
-  cl_status = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU, 0,NULL, &num_devices);
-  device_list = (cl_device_id *) malloc(sizeof(cl_device_id)*num_devices);
+  cl_device_id* device_list = NULL;
+  device_list = (cl_device_id*) malloc(sizeof(cl_device_id)*num_devices);
   cl_status = clGetDeviceIDs( platforms[0],CL_DEVICE_TYPE_GPU, num_devices, device_list, NULL);
 
   // Create one OpenCL context for each device in the platform
