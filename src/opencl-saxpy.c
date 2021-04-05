@@ -87,10 +87,17 @@ int main(void) {
     size_t actual_size;
     cl_status = clGetDeviceInfo(device_list[i], CL_DEVICE_NAME , 1024, &buf, &actual_size);
     if (cl_status != CL_SUCCESS) {
-      printf("clGetDeviceInfo failed to get info for device %d!\n", i);
+      printf("clGetDeviceInfo failed to get CL_DEVICE_NAME for device %d!\n", i);
       exit(1);
     }
     printf("Device name: %s\n", buf);
+    int compute_units;
+    cl_status = clGetDeviceInfo(device_list[i], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(int), &compute_units, NULL);
+    if (cl_status != CL_SUCCESS) {
+      printf("clGetDeviceInfo failed to get CL_DEVICE_MAX_COMPUTE_UNITS for device %d!\n", i);
+      exit(1);
+    }
+    printf("Compute units: %d\n", compute_units);
   }
 
   // Create one OpenCL context for each device in the platform
