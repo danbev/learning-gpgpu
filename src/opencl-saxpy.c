@@ -37,13 +37,30 @@ int main(void) {
   // so we pass 0 which is the length of platform array.
   cl_int cl_status = clGetPlatformIDs(0, NULL, &num_platforms);
   if (cl_status != CL_SUCCESS) {
-    printf("clGetPlatformIDs failed!\n");
+    printf("clGetPlatformIDs failed to get the number of platforms!\n");
+    exit(1);
   }
   printf("Found %d number of OpenCL platforms\n", num_platforms);
 
   cl_platform_id* platforms = NULL;
   platforms = (cl_platform_id*) malloc(sizeof(cl_platform_id)*num_platforms);
+  // Now we query for information about the platforms using the size
+  // num_platforms:
   cl_status = clGetPlatformIDs(num_platforms, platforms, NULL);
+  if (cl_status != CL_SUCCESS) {
+    printf("clGetPlatformIDs failed to get info about the platforms!\n");
+    exit(1);
+  }
+  for (int i = 0; i < num_platforms; i++) {
+    char buf[1024];
+    size_t actual_size;
+    cl_status = clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 1024, &buf, &actual_size);
+    if (cl_status != CL_SUCCESS) {
+      printf("clGetPlatformInfo failed to get info for platform %d!\n", i);
+      exit(1);
+    }
+    printf("Platform name: %s\n", buf);
+  }
 
   //Get the devices list and choose the device you want to run on
   cl_device_id* device_list = NULL;
