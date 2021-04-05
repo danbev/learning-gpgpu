@@ -100,19 +100,37 @@ int main(void) {
     printf("Compute units: %d\n", compute_units);
   }
 
-  // Create one OpenCL context for each device in the platform
+  // A context is used for managing command queues, memory, programs and
+  // kernel objects.
   cl_context context;
-  context = clCreateContext( NULL, num_devices, device_list, NULL, NULL, &cl_status);
+  cl_context_properties* props = NULL;
+  void (*callback)(const char* errInfo, const void* private_info, size_t cb, void* user_data) = NULL;
+  void* user_data = NULL;
+  context = clCreateContext(props, num_devices, device_list, callback , user_data, &cl_status);
+  if (context == NULL) {
+      printf("clCreateContext failed\n");
+      exit(1);
+  }
 
-  // Create a command queue
-  cl_command_queue command_queue = clCreateCommandQueue(context, device_list[0], 0, &cl_status);
+  cl_command_queue_properties queue_props = 0;
+  cl_command_queue command_queue = clCreateCommandQueue(context, device_list[0], queue_props, &cl_status);
 
-  // Create memory buffers on the device for each vector
-  cl_mem x_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY,VECTOR_SIZE * sizeof(float), NULL, &cl_status);
-  cl_mem y_clmem = clCreateBuffer(context, CL_MEM_READ_ONLY,VECTOR_SIZE * sizeof(float), NULL, &cl_status);
+  size_t size = VECTOR_SIZE * sizeof(float);
+  cl_mem x_d = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &cl_status);
+  if (x_d == NULL) {
+      printf("clCreateBuffer failed\n");
+      exit(1);
+  }
+  cl_mem y_d = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &cl_status);
+  if (y_d == NULL) {
+      printf("clCreateBuffer failed\n");
+      exit(1);
+  }
 
-  cl_status = clEnqueueWriteBuffer(command_queue, x_clmem, CL_TRUE, 0, VECTOR_SIZE * sizeof(float), x, 0, NULL, NULL);
-  cl_status = clEnqueueWriteBuffer(command_queue, y_clmem, CL_TRUE, 0, VECTOR_SIZE * sizeof(float), y, 0, NULL, NULL);
+  cl_bool blocking_write = CL_TRUE;
+  size_t offset = 0;
+  cl_status = clEnqueueWriteBuffer(command_queue, x_d, CL_TRUE, 0, size, x, 0, NULL, NULL);
+  cl_status = clEnqueueWriteBuffer(command_queue, y_d, CL_TRUE, 0, size, y, 0, NULL, NULL);
 
   // Create a program from the kernel source
   cl_program program = clCreateProgramWithSource(context, 1,(const char **)&saxpy_kernel, NULL, &cl_status);
@@ -123,8 +141,8 @@ int main(void) {
   cl_kernel kernel = clCreateKernel(program, "saxpy_kernel", &cl_status);
 
   cl_status = clSetKernelArg(kernel, 0, sizeof(float), (void *)&alpha);
-  cl_status = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&x_clmem);
-  cl_status = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&y_clmem);
+  cl_status = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&x_d);
+  cl_status = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&y_d);
 
   // Execute the OpenCL kernel on the list
   size_t global_size = VECTOR_SIZE; // Process the entire lists
@@ -132,7 +150,7 @@ int main(void) {
   cl_status = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
 
   // Read the cl memory y_clmem on device to the host variable y
-  cl_status = clEnqueueReadBuffer(command_queue, y_clmem, CL_TRUE, 0, VECTOR_SIZE * sizeof(float), y, 0, NULL, NULL);
+  cl_status = clEnqueueReadBuffer(command_queue, y_d, CL_TRUE, 0, size, y, 0, NULL, NULL);
 
   // Clean up and wait for all the comands to complete.
   cl_status = clFlush(command_queue);
@@ -145,8 +163,8 @@ int main(void) {
   // Finally release all OpenCL allocated objects and host buffers.
   cl_status = clReleaseKernel(kernel);
   cl_status = clReleaseProgram(program);
-  cl_status = clReleaseMemObject(x_clmem);
-  cl_status = clReleaseMemObject(y_clmem);
+  cl_status = clReleaseMemObject(x_d);
+  cl_status = clReleaseMemObject(y_d);
   cl_status = clReleaseCommandQueue(command_queue);
   cl_status = clReleaseContext(context);
   free(x);
