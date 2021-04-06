@@ -116,12 +116,13 @@ int main(void) {
   cl_command_queue command_queue = clCreateCommandQueue(context, device_list[0], queue_props, &cl_status);
 
   size_t size = VECTOR_SIZE * sizeof(float);
-  cl_mem x_d = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &cl_status);
+  void* host_ptr = NULL;
+  cl_mem x_d = clCreateBuffer(context, CL_MEM_READ_ONLY, size, host_ptr, &cl_status);
   if (x_d == NULL) {
       printf("clCreateBuffer failed\n");
       exit(1);
   }
-  cl_mem y_d = clCreateBuffer(context, CL_MEM_READ_ONLY, size, NULL, &cl_status);
+  cl_mem y_d = clCreateBuffer(context, CL_MEM_READ_ONLY, size, host_ptr, &cl_status);
   if (y_d == NULL) {
       printf("clCreateBuffer failed\n");
       exit(1);
@@ -129,24 +130,60 @@ int main(void) {
 
   cl_bool blocking_write = CL_TRUE;
   size_t offset = 0;
+  // The following call will enque a command to write from the host buffer to
+  // the device buffer (x_h -> x_d)
   cl_status = clEnqueueWriteBuffer(command_queue, x_d, CL_TRUE, 0, size, x, 0, NULL, NULL);
+  if (cl_status != CL_SUCCESS) {
+    printf("clEnqueueWriteBuffer failed to enqueue a write for x_d\n");
+    exit(1);
+  }
   cl_status = clEnqueueWriteBuffer(command_queue, y_d, CL_TRUE, 0, size, y, 0, NULL, NULL);
+  if (cl_status != CL_SUCCESS) {
+    printf("clEnqueueWriteBuffer failed to enqueue a write for y_d\n");
+    exit(1);
+  }
 
   // Create a program from the kernel source
   cl_program program = clCreateProgramWithSource(context, 1,(const char **)&saxpy_kernel, NULL, &cl_status);
+  if (program == NULL) {
+      printf("clCreateProgramWithSource failed\n");
+      exit(1);
+  }
 
-  // Build the program
-  cl_status = clBuildProgram(program, 1, device_list, NULL, NULL, NULL);
+  // Compiles and links the program
+  const char* options = NULL;
+  void (*cb)(cl_program, void* user_data) = NULL;
+  cl_status = clBuildProgram(program, 1, device_list, options, cb, user_data);
+  if (cl_status != CL_SUCCESS) {
+    printf("clBuildProgram failed to compile and link the program\n");
+    exit(1);
+  }
 
   cl_kernel kernel = clCreateKernel(program, "saxpy_kernel", &cl_status);
+  if (kernel == NULL) {
+      printf("clCreateKernel failed\n");
+      exit(1);
+  }
 
   cl_status = clSetKernelArg(kernel, 0, sizeof(float), (void *)&alpha);
+  if (cl_status != CL_SUCCESS) {
+    printf("clSetKernelArg failed to set alpha argument\n");
+    exit(1);
+  }
   cl_status = clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&x_d);
+  if (cl_status != CL_SUCCESS) {
+    printf("clSetKernelArg failed to set x argument\n");
+    exit(1);
+  }
   cl_status = clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&y_d);
+  if (cl_status != CL_SUCCESS) {
+    printf("clSetKernelArg failed to set y argument\n");
+    exit(1);
+  }
 
-  // Execute the OpenCL kernel on the list
-  size_t global_size = VECTOR_SIZE; // Process the entire lists
-  size_t local_size = 4;            // Process one item at a time
+  
+  size_t global_size = VECTOR_SIZE;
+  size_t local_size = 4;
   cl_status = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
 
   // Read the cl memory y_clmem on device to the host variable y
