@@ -1,7 +1,7 @@
 ### Open Computing Language (OpenCl)
 
 
-### installation
+### Installation
 Add the following repo to /etc/yum/repos.d/opencl.repo:
 ```
 [copr:copr.fedorainfracloud.org:jdanecki:intel-opencl]
@@ -17,9 +17,7 @@ enabled_metadata=1
 ```
 
 ```console
-$ sudo dnf install opencl-headers
-$ sudo dnf install intel-opencl
-$ sudo dnf install ocl-icd-devel
+$ sudo dnf install opencl-headers intel-opencl ocl-icd-devel
 ```
 
 After this we will be able to link our programs with  /usr/lib64/libOpenCL.so 
@@ -43,8 +41,17 @@ the same memory or have separate memory. We need to set everything up in the
 host code with regards to memory, like allocate memory for the device and also
 copy data over to that memory. This is done with the OpenCL API. 
 
+#### Workgroups
+
+
 ### mesa
 https://www.mesa3d.org/ (I think)
  
 ### pocl
 http://portablecl.org/
+
+### clinfo
+Is a command line tool for getting information a OpenCL platforms.
+```console
+$ sudo dnf install -y clinfo
+```
