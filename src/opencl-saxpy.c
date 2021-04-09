@@ -181,10 +181,17 @@ int main(void) {
     exit(1);
   }
 
-  
-  size_t global_size = VECTOR_SIZE;
-  size_t local_size = 4;
-  cl_status = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+  size_t work_dim = 1;              // 1, 2, or 3 dimensions are supported
+  size_t global_size = VECTOR_SIZE; // the number of work-items to execute
+  size_t local_size = 4;            // the number of work-items to group into a work-group
+  // NDRange for n-dimension range perhaps?
+  //    []    []       []     []          global size = 4
+  // group0  group1  group2 group3        local_size  = 4
+  cl_status = clEnqueueNDRangeKernel(command_queue, kernel, work_dim, NULL, &global_size, &local_size, 0, NULL, NULL);
+  if (cl_status != CL_SUCCESS) {
+    printf("clEnqueueNDRangeKernel failed\n");
+    exit(1);
+  }
 
   // Read the cl memory y_clmem on device to the host variable y
   cl_status = clEnqueueReadBuffer(command_queue, y_d, CL_TRUE, 0, size, y, 0, NULL, NULL);
